@@ -53,11 +53,11 @@ EOF
 chmod +x ${PACKAGE_DIR}/DEBIAN/postinst
 
 echo "Building Debian package..."
-dpkg-deb --build ${PACKAGE_DIR} nx_${NX_VERSION}_${ARCHITECTURE}.deb
+dpkg-deb --build ${PACKAGE_DIR} nx_${NX_VERSION}.deb
 
 echo "Copying package to output directory for host access..."
-cp nx_${NX_VERSION}_${ARCHITECTURE}.deb /nx-build/output/
+cp nx_${NX_VERSION}.deb /nx-build/output/
 
-echo "Package built: nx_${NX_VERSION}_${ARCHITECTURE}.deb"
-echo "Package copied to: /nx-build/output/nx_${NX_VERSION}_${ARCHITECTURE}.deb"
+echo "Package built: nx_${NX_VERSION}.deb"
+echo "Package copied to: /nx-build/output/nx_${NX_VERSION}.deb"
 

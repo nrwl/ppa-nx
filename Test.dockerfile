@@ -4,8 +4,8 @@ WORKDIR /test
 
 RUN curl https://deb.nodesource.com/setup_22.x | bash -
 
-COPY nx_21.0.4_all.deb /test
+COPY nx_*.deb /test
 
-RUN apt-get install -y ./nx_*_all.deb
+RUN apt-get install -y ./nx_*.deb
 
 CMD ["nx", "--version"]

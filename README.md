@@ -15,17 +15,17 @@ The package:
 ### Build the Docker image
 
 ```bash
-docker build -t nx-apt-builder .
+docker build -t dpkg-nx-builder .
 ```
 
 ### Build the package
 
 ```bash
 # Build with latest version
-docker run -v $(pwd):/nx-build/output nx-apt-builder
+docker run -v $(pwd):/nx-build/output dpkg-nx-builder
 
 # Build with specific version
-docker run -v $(pwd):/nx-build/output -e NX_VERSION=21.0.4 nx-apt-builder
+docker run -v $(pwd):/nx-build/output -e NX_VERSION=21.0.4 dpkg-nx-builder
 ```
 
 The .deb package will be created in the container and automatically copied to your current directory through the mounted volume.
@@ -40,6 +40,13 @@ After installation, you can run Nx commands with:
 
 ```bash
 nx --version
+```
+
+### Testing using Docker
+
+```bash
+docker build -t dpkg-nx-tester -f Test.dockerfile .
+docker run -t dpkg-nx-tester
 ```
 
 ## Publishing

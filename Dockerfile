@@ -10,13 +10,13 @@ RUN apt-get update && apt-get install -y \
     wget \
     curl
 
-WORKDIR /nx-build
+WORKDIR /
 
-RUN mkdir -p /nx-build/output
+RUN mkdir -p /output
 
-COPY build-apt-package.sh /nx-build/
-RUN chmod +x /nx-build/build-apt-package.sh
+COPY create_package.sh /
+RUN chmod +x /create_package.sh
 
-VOLUME ["/nx-build/output"]
+VOLUME ["/output"]
 
-CMD ["/nx-build/build-apt-package.sh"]
+CMD ["/create_package.sh"]

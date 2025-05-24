@@ -22,10 +22,10 @@ docker build -t dpkg-nx-builder .
 
 ```bash
 # Build with latest version
-docker run -v $(pwd):/nx-build/output dpkg-nx-builder
+docker run -v $(pwd):./output dpkg-nx-builder
 
 # Build with specific version
-docker run -v $(pwd):/nx-build/output -e NX_VERSION=21.0.4 dpkg-nx-builder
+docker run -v $(pwd):./output -e NX_VERSION=21.0.4 dpkg-nx-builder
 ```
 
 The .deb package will be created in the container and automatically copied to your current directory through the mounted volume.

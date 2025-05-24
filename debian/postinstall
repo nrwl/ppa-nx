@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+# Ensure nx binary is executable
+chmod +x /usr/bin/nx
+
+#DEBHELPER#
+
+exit 0
+

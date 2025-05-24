@@ -1,0 +1,33 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE = 1
+NX_VERSION := $(shell echo $(DEB_VERSION_UPSTREAM))
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	# Download and extract nx
+	npm pack nx@$(NX_VERSION)
+	mkdir -p debian/tmp/usr/lib/nx/node_modules/nx
+	tar -xzf nx-$(NX_VERSION).tgz -C debian/tmp/usr/lib/nx/node_modules/nx --strip-components=1
+	
+	# Install dependencies
+	cd debian/tmp/usr/lib/nx/node_modules/nx && npm install --production
+	
+	# Create binary wrapper
+	mkdir -p debian/tmp/usr/bin
+	echo '#!/bin/bash' > debian/tmp/usr/bin/nx
+	echo 'NODE_PATH="/usr/lib/nx/node_modules" exec node /usr/lib/nx/node_modules/nx/bin/nx.js "$$@"' >> debian/tmp/usr/bin/nx
+	chmod +x debian/tmp/usr/bin/nx
+
+override_dh_auto_clean:
+	rm -f nx-*.tgz
+	dh_auto_clean
+
+override_dh_auto_test:
+	# Skip tests
+
+override_dh_auto_install:
+	# Files are already in debian/tmp, dh_install will handle them
+

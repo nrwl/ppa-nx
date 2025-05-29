@@ -104,31 +104,31 @@ jobs:
           allow_unsigned_uploads = 0
           EOF
 
-      - name: Upload to PPA
-        run: |
-          # Find the changes file
-          CHANGES_FILE=$(find . -name "nx_${{ github.event.inputs.version }}-1ppa1~${{ matrix.ubuntu_series }}1_source.changes")
+      # - name: Upload to PPA
+      #   run: |
+      #     # Find the changes file
+      #     CHANGES_FILE=$(find . -name "nx_${{ github.event.inputs.version }}-1ppa1~${{ matrix.ubuntu_series }}1_source.changes")
           
-          if [ -z "$CHANGES_FILE" ]; then
-            echo "Error: Could not find .changes file"
-            find . -name "*.changes"
-            exit 1
-          fi
+      #     if [ -z "$CHANGES_FILE" ]; then
+      #       echo "Error: Could not find .changes file"
+      #       find . -name "*.changes"
+      #       exit 1
+      #     fi
           
-          echo "Uploading: $CHANGES_FILE for ${{ matrix.ubuntu_series }}"
-          dput my-ppa "$CHANGES_FILE"
+      #     echo "Uploading: $CHANGES_FILE for ${{ matrix.ubuntu_series }}"
+      #     dput my-ppa "$CHANGES_FILE"
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: build-artifacts-${{ github.event.inputs.version }}-${{ matrix.ubuntu_series }}
-          path: |
-            *.deb
-            *.dsc
-            *.tar.gz
-            *.changes
-            *.buildinfo
+      # - name: Upload artifacts
+      #   uses: actions/upload-artifact@v4
+      #   if: always()
+      #   with:
+      #     name: build-artifacts-${{ github.event.inputs.version }}-${{ matrix.ubuntu_series }}
+      #     path: |
+      #       *.deb
+      #       *.dsc
+      #       *.tar.gz
+      #       *.changes
+      #       *.buildinfo
 
       - name: Summary
         run: |

@@ -1,4 +1,4 @@
-name: Publish to Launchpad PPA
+name: Publish PPA
 
 on:
   workflow_dispatch:
@@ -161,25 +161,7 @@ jobs:
           fi
           
           echo "Uploading: $CHANGES_FILE for $UBUNTU_SERIES"
-          dput my-ppa "$CHANGES_FILE"
-
-      - name: Upload to PPA
-        env:
-          VERSION: ${{ github.event.inputs.version }}
-          UBUNTU_SERIES: ${{ matrix.ubuntu_series }}
-        run: |
-          # Find the changes file
-          CHANGES_FILE=$(find . -name "nx_${VERSION}-1ppa1~${UBUNTU_SERIES}1_source.changes" | head -1)
-          
-          if [ -z "$CHANGES_FILE" ]; then
-            echo "Error: Could not find .changes file"
-            echo "Available files:"
-            find . -name "*.changes"
-            exit 1
-          fi
-          
-          echo "Uploading: $CHANGES_FILE for $UBUNTU_SERIES"
-          dput my-ppa "$CHANGES_FILE"
+          dput ppa:nrwl/nx "$CHANGES_FILE"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

@@ -1,22 +1,33 @@
 FROM node:22-bullseye
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 RUN apt-get update && apt-get install -y \
-    nodejs \
-    npm \
+    build-essential \
+    devscripts \
+    debhelper \
+    dh-make \
     fakeroot \
     dpkg-dev \
-    debhelper \
-    build-essential \
+    lintian \
+    nodejs \
+    npm \
+    curl \
     wget \
-    curl
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /
+WORKDIR /build
+
+COPY . .
+
+ARG NX_VERSION=latest
+ENV NX_VERSION=${NX_VERSION}
 
 RUN mkdir -p /output
 
-COPY create_package.sh /
-RUN chmod +x /create_package.sh
-
+# Set the output directory as a volume
 VOLUME ["/output"]
 
-CMD ["/create_package.sh"]
+# Run the build script
+CMD ["debuild -us -uc -b"]

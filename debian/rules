@@ -1,19 +1,22 @@
 #!/usr/bin/make -f
 
 export DH_VERBOSE = 1
-NX_VERSION := $(shell echo $(DEB_VERSION_UPSTREAM))
+NX_VERSION := 21.0.4
 
 %:
 	dh $@
 
 override_dh_auto_build:
-	# Download and extract nx
-	npm pack nx@$(NX_VERSION)
+	# Verify build dependencies
+	@which node > /dev/null || (echo "ERROR: node not found. Please install nodejs as build dependency." && exit 1)
+	@which curl > /dev/null || (echo "ERROR: curl not found. Please install curl as build dependency." && exit 1)
+	
+	# Download and extract nx from npm registry
+	curl -o nx-$(NX_VERSION).tgz https://registry.npmjs.org/nx/-/nx-$(NX_VERSION).tgz
 	mkdir -p debian/tmp/usr/lib/nx/node_modules/nx
 	tar -xzf nx-$(NX_VERSION).tgz -C debian/tmp/usr/lib/nx/node_modules/nx --strip-components=1
 	
-	# Install dependencies
-	cd debian/tmp/usr/lib/nx/node_modules/nx && npm install --production
+	# Note: Skipping npm install as nx package should be self-contained
 	
 	# Create binary wrapper
 	mkdir -p debian/tmp/usr/bin
@@ -29,5 +32,18 @@ override_dh_auto_test:
 	# Skip tests
 
 override_dh_auto_install:
-	# Files are already in debian/tmp, dh_install will handle them
-
+	# Recreate files that dh_prep may have removed
+	mkdir -p debian/tmp/usr/lib/nx/node_modules/nx
+	mkdir -p debian/tmp/usr/bin
+	
+	# Download and extract nx again if needed
+	test -f nx-$(NX_VERSION).tgz || curl -o nx-$(NX_VERSION).tgz https://registry.npmjs.org/nx/-/nx-$(NX_VERSION).tgz
+	tar -xzf nx-$(NX_VERSION).tgz -C debian/tmp/usr/lib/nx/node_modules/nx --strip-components=1
+	
+	# Install nx dependencies
+	cd debian/tmp/usr/lib/nx/node_modules/nx && npm install --production --omit=dev
+	
+	# Recreate binary wrapper
+	echo '#!/bin/bash' > debian/tmp/usr/bin/nx
+	echo 'NODE_PATH="/usr/lib/nx/node_modules" exec node /usr/lib/nx/node_modules/nx/bin/nx.js "$$@"' >> debian/tmp/usr/bin/nx
+	chmod +x debian/tmp/usr/bin/nx

@@ -1,7 +1,7 @@
 #!/usr/bin/make -f
 
 export DH_VERBOSE = 1
-NX_VERSION := $(shell echo $(DEB_VERSION_UPSTREAM))
+NX_VERSION := 21.0.4
 
 %:
 	dh $@

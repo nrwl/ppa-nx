@@ -40,6 +40,9 @@ override_dh_auto_install:
 	test -f nx-$(NX_VERSION).tgz || curl -o nx-$(NX_VERSION).tgz https://registry.npmjs.org/nx/-/nx-$(NX_VERSION).tgz
 	tar -xzf nx-$(NX_VERSION).tgz -C debian/tmp/usr/lib/nx/node_modules/nx --strip-components=1
 	
+	# Install nx dependencies
+	cd debian/tmp/usr/lib/nx/node_modules/nx && npm install --production --omit=dev
+	
 	# Recreate binary wrapper
 	echo '#!/bin/bash' > debian/tmp/usr/bin/nx
 	echo 'NODE_PATH="/usr/lib/nx/node_modules" exec node /usr/lib/nx/node_modules/nx/bin/nx.js "$$@"' >> debian/tmp/usr/bin/nx

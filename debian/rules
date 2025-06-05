@@ -15,10 +15,40 @@ override_dh_auto_build:
 	# Install dependencies
 	cd debian/tmp/usr/lib/nx/node_modules/nx && npm install --production
 	
-	# Create binary wrapper
+	# Create binary wrapper with Node.js version check
 	mkdir -p debian/tmp/usr/bin
-	echo '#!/bin/bash' > debian/tmp/usr/bin/nx
-	echo 'NODE_PATH="/usr/lib/nx/node_modules" exec node /usr/lib/nx/node_modules/nx/bin/nx.js "$$@"' >> debian/tmp/usr/bin/nx
+	cat > debian/tmp/usr/bin/nx << 'EOF'
+#!/bin/bash
+
+# Check Node.js version and warn if < 20
+NODE_VERSION=$$(node -v 2>/dev/null | grep -oE 'v[0-9]+' | cut -c2-)
+
+if [ -n "$$NODE_VERSION" ] && [ "$$NODE_VERSION" -lt 20 ]; then
+    cat >&2 << 'WARNING'
+╔══════════════════════════════════════════════════════════════════════╗
+║                         ⚠️  NODE.JS WARNING ⚠️                       ║
+╠══════════════════════════════════════════════════════════════════════╣
+║ You are using an older version of Node.js that may not be fully      ║
+║ compatible with nx. Node.js >= 20 is recommended for optimal         ║
+║ compatibility.                                                       ║
+║                                                                      ║
+║ Your current version may work but could encounter issues.            ║
+║                                                                      ║
+║ To upgrade Node.js:                                                  ║
+║ • Visit: https://nodejs.org/en/download/                             ║
+║ • Or use NodeSource: https://github.com/nodesource/distributions     ║
+║                                                                      ║
+║ For Ubuntu/Debian:                                                   ║
+║   curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -  ║
+║   sudo apt-get install -y nodejs                                     ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+WARNING
+fi
+
+# Execute nx with proper NODE_PATH
+NODE_PATH="/usr/lib/nx/node_modules" exec node /usr/lib/nx/node_modules/nx/bin/nx.js "$$@"
+EOF
 	chmod +x debian/tmp/usr/bin/nx
 
 override_dh_auto_clean:

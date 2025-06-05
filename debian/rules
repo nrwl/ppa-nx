@@ -32,4 +32,15 @@ override_dh_auto_test:
 	# Skip tests
 
 override_dh_auto_install:
-	# Files are already in debian/tmp, dh_install will handle them
+	# Recreate files that dh_prep may have removed
+	mkdir -p debian/tmp/usr/lib/nx/node_modules/nx
+	mkdir -p debian/tmp/usr/bin
+	
+	# Download and extract nx again if needed
+	test -f nx-$(NX_VERSION).tgz || curl -o nx-$(NX_VERSION).tgz https://registry.npmjs.org/nx/-/nx-$(NX_VERSION).tgz
+	tar -xzf nx-$(NX_VERSION).tgz -C debian/tmp/usr/lib/nx/node_modules/nx --strip-components=1
+	
+	# Recreate binary wrapper
+	echo '#!/bin/bash' > debian/tmp/usr/bin/nx
+	echo 'NODE_PATH="/usr/lib/nx/node_modules" exec node /usr/lib/nx/node_modules/nx/bin/nx.js "$$@"' >> debian/tmp/usr/bin/nx
+	chmod +x debian/tmp/usr/bin/nx

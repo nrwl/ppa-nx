@@ -2,7 +2,7 @@ Source: nx
 Section: development
 Priority: optional
 Maintainer: Nrwl (hello@nrwl.io)
-Build-Depends: debhelper (>= 10), nodejs
+Build-Depends: debhelper (>= 10), nodejs, curl
 Standards-Version: 4.5.0
 Homepage: https://nx.dev
 

@@ -17,7 +17,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y devscripts build-essential debhelper dh-make fakeroot lintian nodejs npm
+          sudo apt-get install -y devscripts build-essential debhelper dh-make fakeroot lintian nodejs
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

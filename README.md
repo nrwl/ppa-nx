@@ -1,60 +1,16 @@
-# Nx APT Package Builder
+# Nx PPA
 
-This project creates a Debian package (.deb) for installing Nx via APT.
+This project is used to publish packages tor the Nx PPA. It currently publishes the `nx` package, which is a wrapper for our Nx CLI, which requires Node.js.
 
-## How it works
+PPA: https://launchpad.net/~nrwl/+archive/ubuntu/nx/+packages
 
-The package:
-1. Downloads the Nx npm package
-2. Installs it to `/usr/lib/node_modules/nx`
-3. Creates a binary wrapper in `/usr/bin/nx`
-4. Packages everything as a standard Debian package
+## Guideline
 
-## Usage
+Since the Nx wrapper is just the global installation, we do not need to publish every version of Nx to it. Generally, we keep the package in PPA one minor version behind latest NPM version.
 
-### Build the Docker image
+## Publishing new versions
 
-```bash
-docker build -t dpkg-nx-builder .
-```
+Go to [https://github.com/nrwl/ppa-nx/actions/workflows/publish.yml](https://github.com/nrwl/ppa-nx/actions/workflows/publish.yml) and use `Run workflow`. Fill in the Nx version that matches the version published to NPM registry.
 
-### Build the package
+Once the workflow is finished, the package will be validated on Launchpad. If successful, it'll be published in the PPA and be available to use.
 
-```bash
-# Build with latest version
-docker run -v $(pwd):./output dpkg-nx-builder
-
-# Build with specific version
-docker run -v $(pwd):./output -e NX_VERSION=21.0.4 dpkg-nx-builder
-```
-
-The .deb package will be created in the container and automatically copied to your current directory through the mounted volume.
-
-### Install the package
-
-```bash
-sudo apt install ./nx_*_all.deb
-```
-
-After installation, you can run Nx commands with:
-
-```bash
-nx --version
-```
-
-### Testing using Docker
-
-```bash
-docker build -t dpkg-nx-tester -f Test.dockerfile .
-docker run -t dpkg-nx-tester
-```
-
-## Publishing
-
-To add this package to a repository, you would:
-
-1. Sign the package
-2. Set up a Debian repository server
-3. Add the package to the repository
-
-Refer to the [Debian Repository Setup Guide](https://wiki.debian.org/DebianRepository/Setup) for details.

@@ -1,0 +1,70 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE = 1
+
+%:
+	dh $@
+
+# Define a function to create the nx wrapper script
+define CREATE_NX_WRAPPER
+	mkdir -p debian/tmp/usr/bin
+	echo '#!/bin/bash' > debian/tmp/usr/bin/nx
+	echo '# Nx wrapper script with Node.js version check' >> debian/tmp/usr/bin/nx
+	echo '' >> debian/tmp/usr/bin/nx
+	echo '# Check Node.js version' >> debian/tmp/usr/bin/nx
+	echo 'NODE_VERSION=$$(node -v 2>/dev/null | sed "s/v//")' >> debian/tmp/usr/bin/nx
+	echo 'REQUIRED_VERSION="20.0.0"' >> debian/tmp/usr/bin/nx
+	echo '' >> debian/tmp/usr/bin/nx
+	echo '# Version comparison function' >> debian/tmp/usr/bin/nx
+	echo 'version_lt() {' >> debian/tmp/usr/bin/nx
+	echo '    # Returns 0 (true) if $$1 < $$2' >> debian/tmp/usr/bin/nx
+	echo '    test "$$(printf "%s\\n" "$$1" "$$2" | sort -V | head -n 1)" = "$$1"' >> debian/tmp/usr/bin/nx
+	echo '}' >> debian/tmp/usr/bin/nx
+	echo '' >> debian/tmp/usr/bin/nx
+	echo '# Check if Node.js version is sufficient' >> debian/tmp/usr/bin/nx
+	echo 'if [ -n "$$NODE_VERSION" ] && version_lt "$$NODE_VERSION" "$$REQUIRED_VERSION"; then' >> debian/tmp/usr/bin/nx
+	echo '    echo "⚠️  Warning: Nx requires Node.js 20 or higher. You have Node.js $$NODE_VERSION." >&2' >> debian/tmp/usr/bin/nx
+	echo '    echo "" >&2' >> debian/tmp/usr/bin/nx
+	echo '    echo "To update Node.js on Ubuntu/Debian, we recommend using NodeSource:" >&2' >> debian/tmp/usr/bin/nx
+	echo '    echo "  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -" >&2' >> debian/tmp/usr/bin/nx
+	echo '    echo "  sudo apt-get install -y nodejs" >&2' >> debian/tmp/usr/bin/nx
+	echo '    echo "" >&2' >> debian/tmp/usr/bin/nx
+	echo '    echo "Alternative methods:" >&2' >> debian/tmp/usr/bin/nx
+	echo '    echo "  - Using nvm: https://github.com/nvm-sh/nvm" >&2' >> debian/tmp/usr/bin/nx
+	echo '    echo "  - Using fnm: https://github.com/Schniz/fnm" >&2' >> debian/tmp/usr/bin/nx
+	echo '    echo "  - Using snap: sudo snap install node --classic --channel=20" >&2' >> debian/tmp/usr/bin/nx
+	echo '    echo "" >&2' >> debian/tmp/usr/bin/nx
+	echo 'fi' >> debian/tmp/usr/bin/nx
+	echo '' >> debian/tmp/usr/bin/nx
+	echo '# Run nx with proper NODE_PATH' >> debian/tmp/usr/bin/nx
+	echo 'NODE_PATH="/usr/lib/nx/node_modules" exec node /usr/lib/nx/node_modules/nx/bin/nx.js "$$@"' >> debian/tmp/usr/bin/nx
+	chmod +x debian/tmp/usr/bin/nx
+endef
+
+override_dh_auto_build:
+	# Packages must be hermetic, so nx package must be downloaded and installed before packaging.
+	@test -d debian/vendor/package || (echo "ERROR: Pre-installed nx not found in debian/vendor/package. Download and extract nx tgz, then run npm install first." && exit 1)
+	
+	# Copy pre-installed nx package with all dependencies.
+	mkdir -p debian/tmp/usr/lib/nx/node_modules/nx
+	cp -r debian/vendor/package/* debian/tmp/usr/lib/nx/node_modules/nx/
+	
+	# Create binary wrapper with Node.js version check.
+	# Ubuntu has outdated Node.js versions so users must install them via a different method.
+	$(CREATE_NX_WRAPPER)
+
+override_dh_auto_clean:
+	dh_auto_clean
+
+override_dh_auto_test:
+	# Skip tests
+
+override_dh_auto_install:
+	# Recreate files that dh_prep may have removed
+	mkdir -p debian/tmp/usr/lib/nx/node_modules/nx
+	
+	# Copy pre-installed nx package with all dependencies again if needed
+	test -d debian/tmp/usr/lib/nx/node_modules/nx/bin || cp -r debian/vendor/package/* debian/tmp/usr/lib/nx/node_modules/nx/
+	
+	# Recreate binary wrapper with Node.js version check
+	$(CREATE_NX_WRAPPER)

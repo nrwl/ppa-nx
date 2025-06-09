@@ -1,0 +1,18 @@
+Source: nx
+Section: utils
+Priority: optional
+Maintainer: Jack Hsu <jack@nrwl.io>
+Build-Depends: debhelper (>= 10), curl, nodejs, npm
+Standards-Version: 4.5.0
+Homepage: https://nx.dev
+
+Package: nx
+Architecture: all
+Depends: nodejs, npm
+Description: Nx is a build system, optimized for monorepos
+ Nx is a build system, optimized for monorepos, with plugins for popular
+ frameworks and tools and advanced CI capabilities including caching and
+ distribution.
+ .
+ Note: Nx requires Node.js 20 or higher for optimal functionality.
+ The package will warn if an older version is detected.

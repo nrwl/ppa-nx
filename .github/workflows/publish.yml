@@ -1,0 +1,195 @@
+name: Publish PPA
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish'
+        required: true
+        type: string
+
+jobs:
+  publish-ppa:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        ubuntu_series: 
+          - 'noble'    # 24.04 LTS
+          - 'jammy'    # 22.04 LTS
+      fail-fast: false
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup build environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            devscripts \
+            build-essential \
+            dput \
+            gnupg2 \
+            dh-make \
+            fakeroot \
+            lintian \
+            nodejs \
+            npm
+
+      - name: Import and setup GPG key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PUBLIC_KEY: ${{ secrets.GPG_PUBLIC_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          # Create GPG directory with proper permissions
+          mkdir -p ~/.gnupg
+          chmod 700 ~/.gnupg
+          
+          # Import GPG keys
+          echo "$GPG_PRIVATE_KEY" > /tmp/private.key
+          echo "$GPG_PUBLIC_KEY" > /tmp/public.key
+          gpg --batch --import /tmp/private.key
+          gpg --batch --import /tmp/public.key
+          rm -f /tmp/private.key /tmp/public.key
+          
+          # Configure GPG
+          cat > ~/.gnupg/gpg.conf << EOF
+          use-agent
+          pinentry-mode loopback
+          EOF
+          
+          cat > ~/.gnupg/gpg-agent.conf << EOF
+          allow-loopback-pinentry
+          default-cache-ttl 86400
+          max-cache-ttl 86400
+          EOF
+          
+          # Start GPG agent
+          gpg-connect-agent reloadagent /bye
+          
+          # Get the key ID and export it for later use
+          GPG_KEY_ID=$(gpg --list-secret-keys --keyid-format LONG | grep sec | head -1 | sed 's/.*\/\([A-F0-9]*\).*/\1/')
+          echo "GPG_KEY_ID=$GPG_KEY_ID" >> $GITHUB_ENV
+          echo "Found GPG key ID: $GPG_KEY_ID"
+
+      - name: Create source package directory
+        env:
+          VERSION: ${{ github.event.inputs.version }}
+          UBUNTU_SERIES: ${{ matrix.ubuntu_series }}
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          DEBIAN_VERSION="${VERSION}-1ppa1~${UBUNTU_SERIES}1"
+          
+          # Create source directory
+          mkdir -p "nx-${VERSION}"
+          
+          # Copy source files (excluding build artifacts and git)
+          rsync -av \
+            --exclude='.git*' \
+            --exclude='*.deb' \
+            --exclude='*.tar.gz' \
+            --exclude='*.changes' \
+            --exclude='*.dsc' \
+            --exclude='*.buildinfo' \
+            --exclude='.github' \
+            ./ "nx-${VERSION}/"
+          
+          cd "nx-${VERSION}"
+          
+          # Pre-install nx with all dependencies
+          mkdir -p debian/vendor
+          curl -o debian/vendor/nx-${VERSION}.tgz https://registry.npmjs.org/nx/-/nx-${VERSION}.tgz
+          cd debian/vendor
+          tar -xzf nx-${VERSION}.tgz
+          cd package
+          npm install --production
+          cd ../../..
+          
+          cat > debian/changelog << EOF
+          nx (${DEBIAN_VERSION}) ${UBUNTU_SERIES}; urgency=medium
+
+            * Release version ${VERSION}
+            * Automated PPA build from GitHub Actions
+            * Built for Ubuntu ${UBUNTU_SERIES}
+            * Upstream release: https://github.com/nrwl/nx/releases/tag/${VERSION}
+
+           -- Jack Hsu <jack@nrwl.io>  $(date -R)
+
+          EOF
+      - name: Build source package
+        env:
+          VERSION: ${{ github.event.inputs.version }}
+          UBUNTU_SERIES: ${{ matrix.ubuntu_series }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          cd "nx-${{ github.event.inputs.version }}"
+          
+          echo "Building source package with debuild"
+          echo "Using GPG key ID: $GPG_KEY_ID"
+          
+          # Set DEBEMAIL and DEBFULLNAME for consistent signing
+          export DEBEMAIL="jack@nrwl.io"
+          export DEBFULLNAME="Jack Hsu"
+          
+          # Build source package with proper GPG signing
+          debuild -S -sa \
+            -k"$GPG_KEY_ID" \
+            -p"gpg --batch --yes --passphrase-fd 0 --pinentry-mode loopback" << EOF
+          $GPG_PASSPHRASE
+          EOF
+
+      - name: Configure dput
+        run: |
+          cat > ~/.dput.cf << EOF
+          [my-ppa]
+          fqdn = ppa.launchpad.net
+          method = ftp
+          incoming = ~nrwl/nx/ubuntu/
+          login = anonymous
+          allow_unsigned_uploads = 0
+          EOF
+
+      - name: Upload to PPA
+        env:
+          VERSION: ${{ github.event.inputs.version }}
+          UBUNTU_SERIES: ${{ matrix.ubuntu_series }}
+        run: |
+          # Find the changes file
+          CHANGES_FILE=$(find . -name "nx_${VERSION}-1ppa1~${UBUNTU_SERIES}1_source.changes" | head -1)
+          
+          if [ -z "$CHANGES_FILE" ]; then
+            echo "Error: Could not find .changes file"
+            echo "Available files:"
+            find . -name "*.changes"
+            exit 1
+          fi
+          
+          echo "Uploading: $CHANGES_FILE for $UBUNTU_SERIES"
+          dput ppa:nrwl/nx "$CHANGES_FILE"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-artifacts-${{ github.event.inputs.version }}-${{ matrix.ubuntu_series }}
+          path: |
+            *.deb
+            *.dsc
+            *.tar.gz
+            *.changes
+            *.buildinfo
+
+      - name: Summary
+        env:
+          VERSION: ${{ github.event.inputs.version }}
+          UBUNTU_SERIES: ${{ matrix.ubuntu_series }}
+        run: |
+          echo "## PPA Upload Summary - $UBUNTU_SERIES" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: $VERSION" >> $GITHUB_STEP_SUMMARY
+          echo "- **Ubuntu Series**: $UBUNTU_SERIES" >> $GITHUB_STEP_SUMMARY
+          echo "- **PPA**: ppa:nrwl/nx" >> $GITHUB_STEP_SUMMARY
+          echo "- **Package**: nx_${VERSION}-1ppa1~${UBUNTU_SERIES}1" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The package has been uploaded to Launchpad and will be built automatically." >> $GITHUB_STEP_SUMMARY
+          echo "Check the build status at: https://launchpad.net/~nrwl/+archive/ubuntu/nx" >> $GITHUB_STEP_SUMMARY
